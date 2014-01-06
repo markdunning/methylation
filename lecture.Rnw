@@ -1,0 +1,182 @@
+% this is a simplified version of 
+% https://github.com/yihui/knitr/blob/master/inst/examples/knitr-beamer.Rnw
+\documentclass{beamer}
+\ifdefined\knitrout
+  \renewenvironment{knitrout}{\begin{footnotesize}}{\end{footnotesize}}
+\else
+\fi
+\begin{document}
+
+
+\title{Analysis of Illumina Methylation data}
+\author{Mark Dunning}
+\institute[Bioinformatics Core] % (optional, but mostly needed)
+{
+
+  Cancer Research Uk\\
+  Cambridge Research Institute\\
+  Robinson Way\\
+  Cambridge \\
+}
+
+% very important to use option [fragile] for frames containing code output!
+
+\begin{frame}
+  \titlepage
+\end{frame}
+
+\begin{frame}{Outline}
+  \tableofcontents
+  % You might wish to add the option [pausesections]
+\end{frame}
+
+
+
+\section{Introduction}
+
+\begin{frame}{DNA Methylation}
+\begin{itemize}
+\item An epigenetic modification of DNA structure, but not sequence
+\item Occurs at \textit{CpG} locations in the genome; C followed by G
+\item Areas with dense concentration of CpGs known as \textit{CpG islands}
+\item Increased methylation known as \textit{hypermethylation}. Decreased methylayion known as \textit{hypomethylation}
+\item Global hypermethylation widely reported in cancer
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}{Measuring DNA Methylation on microarrays}
+\begin{columns}
+\column{.5\textwidth}
+\begin{itemize}
+\item{Bisulphite-treat the sample}
+\item{Umethylated Cs converted to U}
+\item{Perform genotyping assay}
+\end{itemize}
+\column{.5\textwidth}
+\includegraphics[height=6cm]{assay.png}
+\end{columns}
+\end{frame}
+
+
+\begin{frame}{Quantifying methylation}
+For each probe, we obtain measurements for the \textbf{M}ethylated and \textbf{U}nmethylated alleles. We define the methylation level of the probe, $\beta$, to be;
+
+\begin{equation}
+\beta =  \frac{M}{U + M + 100} 
+\end{equation}
+
+$\beta$ is the proportion of methylation for a given locus $0 < \beta < 1 $
+
+\end{frame}
+
+\begin{frame}[fragile]{Technology evolution}
+Illumina only offer human methylation arrays
+\begin{itemize}
+\item{GoldenGate}
+\begin{itemize}
+\item{A cancer gene panel}
+\item{1,500 locations per sample, 96 samples per plate}
+\item{GPL9183 4468 Samples 27 Datasets}
+\end{itemize}
+\item{27k}
+\begin{itemize}
+\item{27,000 locations per sample, 12 samples per chip}
+\item{GPL8490 13965 Samples 238 Datasets }
+\end{itemize}
+\item{450k}
+\begin{itemize}
+\item{450,000 locations per sample, 12 samples per chip}
+\item{GPL13534 8793 Samples 160 Datasets}
+\end{itemize}
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}{Different types of probe}
+\includegraphics[height=6cm]{probetypes.png}
+Dedeurwaerder et al. Evaluation of the Infinium Methylation 450K technology. Future Medicine
+\end{frame}
+
+\begin{frame}{Data formats}
+\begin{itemize}
+\item idat the raw output from the scanner
+\item GenomeStudio report
+\item GEO-deposited data; usually just the beta values
+\end{itemize}
+\end{frame}
+
+\section{Analysis Issues}
+\subsection{Type II bias}
+
+\begin{frame}{Problem definition}
+\begin{itemize}
+\item{TypeI and TypeII probes are shown to have different distributions}
+\item{They also target different genomic regions}
+\item{Need to use separate analysis and normalisation}
+\end{itemize}
+Dedeurwaerder et al
+\end{frame}
+
+\begin{frame}{SWAN}
+
+\end{frame}
+
+
+\subsection{Batch effects}
+
+\begin{frame}{Motivation}
+\begin{itemize}
+\item{All large studies will have batch effects}
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Visualisation}
+
+\end{frame}
+
+\begin{frame}{Correction - ComBAT}
+
+\end{frame}
+
+\begin{frame}{Design Implications}
+\begin{itemize}
+\item{Ensure that sample groups are balanced among batches}
+\end{itemize}
+\end{frame}
+
+\subsection{Choice of methylayion measure}
+\begin{frame}{To be(ta) or not to be(ta)}
+\begin{itemize}
+\item{beta has a more natural interpretation}
+\item{log-ratios are more-ameanable for analysis}
+\end{itemize}
+\end{frame}
+
+\subsection{Differential methylaytion}
+
+\begin{frame}{An old friend}
+
+\end{frame}
+
+\begin{frame}{Region-based approaches}
+
+\end{frame}
+
+\begin{frame}{Copy-Number analysis from 450k data}
+
+\end{frame}
+
+\begin{frame}{Available software}
+
+\end{frame}
+
+\begin{frame}[fragile]{This talk was brought to you by...}
+
+<<sessionInfo>>=
+
+sessionInfo()
+@
+
+\end{frame}
+\end{document}
