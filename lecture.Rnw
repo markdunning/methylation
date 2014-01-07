@@ -8,7 +8,7 @@
 \begin{document}
 
 
-\title{Analysis of Illumina Methylation data}
+\title{Analysis of Illumina Methylation arrays}
 \author{Mark Dunning}
 \institute[Bioinformatics Core] % (optional, but mostly needed)
 {
@@ -93,21 +93,163 @@ Illumina only offer human methylation arrays
 
 \end{frame}
 
-\begin{frame}{Different types of probe}
-\includegraphics[height=6cm]{probetypes.png}
-Dedeurwaerder et al. Evaluation of the Infinium Methylation 450K technology. Future Medicine
+
+
+
+\begin{frame}
+We will concentrate on the analysis of 450k data
+\begin{itemize}
+\item{It is the technology currently-available}
+\item{It is an area of active research}
+\item{Annual workshop}
+\begin{itemize}
+\item{http://www2.cancer.ucl.ac.uk/medicalgenomics/tmorris/450k.html}
+\end{itemize}
+\item{Online forum}
+\begin{itemize}
+\item{http://tinyurl.com/o7lqty8}
+\end{itemize}
+\item{At the moment, it is prefered to sequencing for methylation analysis}
+\end{itemize}
+Unless specified otherwise, code will be from the {\tt minfi} package
 \end{frame}
 
-\begin{frame}{Data formats}
+\section{Reading the data}
+\begin{frame}{idat format}
+450k arrays are commonly analysed from \textit{idat} files
+
+http://f1000research.com/articles/2-264/v1
+
+\includegraphics[height=6cm]{idat.png}
+
+\end{frame}
+
+\begin{frame}[fragile]
+Each sample has a Red and Green idat file
+<<echo=F>>=
+suppressPackageStartupMessages(library(minfi))
+baseDir <- system.file("extdata", package = "minfiData")
+list.files(file.path(baseDir, "5723646052"))
+@
+A targets file / sample sheet is used to define the samples
+<<echo=F>>=
+targets <- read.450k.sheet(baseDir)
+targets[1:2,]
+@
+\end{frame}
+
+\begin{frame}[fragile]
+First, we retrieve the red and green intensities from the idat files
+<<>>=
+RGset <- read.450k.exp(base = baseDir, targets = targets)
+
+@
+
+<<echo=FALSE>>=
+grn <- assayDataElement(RGset, "Green")
+head(grn)
+@
+\end{frame}
+
+\section{QC}
+\subsection{Sample QC}
+
+\begin{frame}[fragile]{QC of samples}
+
+<<fig.height=4>>=
+pd <- pData(RGset)
+densityPlot(RGset, sampGroups = pd$Sample_Group,main = "Beta", xlab = "Beta")
+
+@
+\end{frame}
+
+\begin{frame}[fragile]{QC of samples}
+
+<<fig.height=4>>=
+densityBeanPlot(RGset, sampGroups = pd$Sample_Group,sampNames = pd$Sample_Name)
+
+@
+\end{frame}
+
+\begin{frame}[fragile]{QC of samples}
+
+<<fig.height=4>>=
+controlStripPlot(RGset, controls="BISULFITE CONVERSION II",sampNames = pd$Sample_Name)
+@
+\end{frame}
+
+\subsection{Probe QC}
+
+\begin{frame}
 \begin{itemize}
-\item idat the raw output from the scanner
-\item GenomeStudio report
-\item GEO-deposited data; usually just the beta values
+\item{Probes that are not \textit{detected} can be discarded.}
+\begin{itemize}
+\item e.g. $ >25\%$ with dectection p-value < 0.05
+\end{itemize}
+\item{Annotation considerations}
+\begin{itemize}
+\item{Cross-hybridisation}
+\item{Autosomal effects}
+\end{itemize}
 \end{itemize}
 \end{frame}
 
-\section{Analysis Issues}
+\section{Preprocessing}
+
+\begin{frame}[fragile]{Preprocess the intensities}
+Convert the red and green intensities into Methylated and Unmethylated values using a \textit{manifest} package
+<<>>=
+MSet.raw <- preprocessRaw(RGset)
+MSet.raw
+@
+
+\end{frame}
+
+\begin{frame}[fragile]{Background correction}
+Can mimic the background correction steps used by Illumina in GenomeStudio
+<<>>=
+MSet.bg <- preprocessIllumina(RGset)
+args(preprocessIllumina)
+@
+
+\end{frame}
+
+
+\begin{frame}[fragile]{Filter samples}
+
+<<>>=
+preprocessQuantile(RGset)
+@
+\end{frame}
+
+\section{Normalisation}
+
 \subsection{Type II bias}
+
+\begin{frame}{Different types of probe}
+\includegraphics[height=6cm]{probetypes.png}\\
+Dedeurwaerder et al. Evaluation of the Infinium Methylation 450K technology. Future Medicine
+\end{frame}
+
+\begin{frame}[fragile]
+Distribution of probe types
+<<echo=F>>=
+anno <- suppressMessages(getAnnotation(MSet.raw))
+table(anno$Type)
+@
+Differences in signal
+<<echo=FALSE,fig.height=3,warning=FALSE>>=
+suppressPackageStartupMessages(library(ggplot2))
+Methylated <- log2(getMeth(MSet.raw)[,1])
+Unmethylated <- log2(getUnmeth(MSet.raw)[,1])
+Beta <- getBeta(MSet.raw)[,1]
+ProbeType <- anno$Type
+df <- suppressMessages(melt(data.frame(Methylated, Unmethylated,Beta,ProbeType)))
+
+suppressWarnings(ggplot(df, aes(x=value, col=ProbeType)) + geom_density() + facet_wrap(~variable,scales="free"))
+@
+\end{frame}
+
 
 \begin{frame}{Problem definition}
 \begin{itemize}
@@ -119,16 +261,105 @@ Dedeurwaerder et al
 \end{frame}
 
 \begin{frame}{SWAN}
+Maksimovic et al. Genome Biology 2012, 13:R44 
+
+Observed that for specific number of CpGs within the probe, distributions are comparable
+<<echo=FALSE,warning=FALSE,message=FALSE,fig.height=4>>=
+typeI <- getProbeInfo(MSet.raw, type = "I")[, c("Name", "nCpG")]
+    typeII <- getProbeInfo(MSet.raw, type = "II")[, c("Name", "nCpG")]
+    CpG.counts <- rbind(typeI, typeII)
+    CpG.counts$Name <- as.character(CpG.counts$Name)
+
+df <- melt(data.frame(Name = rownames(anno),Methylated, Unmethylated,ProbeType))
+df$NumberOfCpGs <- CpG.counts$nCpG[match(df$Name,CpG.counts[,1])]
+
+df <- df[df$NumberOfCpGs > 0 & df$NumberOfCpGs <4,]
+
+suppressWarnings(ggplot(df, aes(x=value, col=ProbeType)) + geom_density() + facet_wrap(NumberOfCpGs~variable,scales="free",ncol=2))
+
+@
+
+Hence, they apply quantile normalisation to each subset.
+\end{frame}
+
+\begin{frame}{Other methods}
+\begin{itemize}
+\item{BMIQ}
+\begin{itemize}
+\item{Implemented in wateRmelon}
+\end{itemize}
+\item{Peak-based correction}
+\begin{itemize}
+\item{Rescale TypeII probes based on TypeI assuming a bimodel shape}
+\item{Implemented in IMA package}
+\item{Does not work well when distribution does not exhibit well-defined peaks}
+\end{itemize}
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{The effect of SWAN}
+
+<<>>=
+Mset.swan <- preprocessSWAN(RGset)
+Methylated <- log2(getMeth(Mset.swan)[,1])
+Unmethylated <- log2(getUnmeth(Mset.swan)[,1])
+Beta <- getBeta(Mset.swan)[,1]
+ProbeType <- anno$Type
+df <- suppressMessages(melt(data.frame(Methylated, Unmethylated,Beta,ProbeType)))
+
+suppressWarnings(ggplot(df, aes(x=value, col=ProbeType)) + geom_density() + facet_wrap(~variable,scales="free"))
+@
+\end{frame}
+
+
+
+\section{Choice of methylayion measure}
+\begin{frame}[fragile]{Quantify Methylation}
+The standard is to use $\beta$ values
+<<>>=
+M <- getMeth(MSet.raw)
+U <- getUnmeth(MSet.raw)
+beta <- getBeta(MSet.raw)
+beta[1:5,1:2]
+M[1:5,1:2] / (M[1:5,1:2] + U[1:5,1:2])
+@
 
 \end{frame}
 
 
-\subsection{Batch effects}
+
+\begin{frame}{To be(ta) or not to be(ta)}
+\begin{itemize}
+\item{beta has a more natural interpretation}
+\item{log-ratios are more-ameanable for analysis}
+\end{itemize}
+Comparison of Beta-value and M-value methods for quantifying methylation levels by microarray analysis. Du et al. BMC Bioinformatics
+\begin{equation}
+LR = log_2 \frac{M}{U}
+\end{equation}
+Sometimes (confusingly) called \textit{M-values}
+
+\end{frame}
+
+\begin{frame}{Conversion}
+The two measures can be converted easily
+\begin{equation}
+\beta = \frac{2^M}{2^M +1}
+\end{equation}
+
+\begin{equation}
+M = log_2\frac{\beta}{1 - \beta}
+\end{equation}
+
+\end{frame}
+
+
+
+\section{Batch effects}
 
 \begin{frame}{Motivation}
-\begin{itemize}
-\item{All large studies will have batch effects}
-\end{itemize}
+\textit{'it seems that batch effects are almost always present in large-scale Infinium data sets, and they can introduce severe bias during subsequent analysis steps if no adequate countermeasures are taken.'} Bock. Analysing and interpreting DNA methylation data. Nature Reviews Genetics
+
 \end{frame}
 
 \begin{frame}{Visualisation}
@@ -145,23 +376,22 @@ Dedeurwaerder et al
 \end{itemize}
 \end{frame}
 
-\subsection{Choice of methylayion measure}
-\begin{frame}{To be(ta) or not to be(ta)}
-\begin{itemize}
-\item{beta has a more natural interpretation}
-\item{log-ratios are more-ameanable for analysis}
-\end{itemize}
-\end{frame}
 
-\subsection{Differential methylaytion}
 
+\section{Differential methylaytion}
+
+\subsection{DMPs}
 \begin{frame}{An old friend}
 
 \end{frame}
 
+\subsection{DMRs}
+
 \begin{frame}{Region-based approaches}
 
 \end{frame}
+
+\section{Other applications}
 
 \begin{frame}{Copy-Number analysis from 450k data}
 
