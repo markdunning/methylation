@@ -313,7 +313,7 @@ suppressWarnings(ggplot(df, aes(x=value, col=ProbeType)) + geom_density() + face
 
 
 
-\section{Choice of methylayion measure}
+\section{Choice of methylation measure}
 \begin{frame}[fragile]{Quantify Methylation}
 The standard is to use $\beta$ values
 <<>>=
@@ -357,7 +357,7 @@ M = log_2\frac{\beta}{1 - \beta}
 
 \section{Batch effects}
 
-\begin{frame}{Motivation}
+\begin{frame}{Batch effects}
 \textit{'it seems that batch effects are almost always present in large-scale Infinium data sets, and they can introduce severe bias during subsequent analysis steps if no adequate countermeasures are taken.'} Bock. Analysing and interpreting DNA methylation data. Nature Reviews Genetics
 
 \end{frame}
@@ -378,7 +378,7 @@ M = log_2\frac{\beta}{1 - \beta}
 
 
 
-\section{Differential methylaytion}
+\section{Differential methylation}
 
 \subsection{DMPs}
 \begin{frame}{An old friend}
