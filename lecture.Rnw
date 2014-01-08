@@ -362,12 +362,33 @@ M = log_2\frac{\beta}{1 - \beta}
 
 \end{frame}
 
-\begin{frame}{Visualisation}
+\begin{frame}[fragile]{Visualisation}
+Multi-dimensional scaling (\textit{MDS}) plots are useful for assesing sample relations in a similar way to PCA.
+
+<<fig.height=4>>=
+mdsPlot(Mset.swan, numPositions = 1000, sampGroups = pd$Sample_Group,
+        sampNames = pd$Sample_Name)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]{Check other covariates}
+<<echo=FALSE,fig.height=6>>=
+b <- getBeta(Mset.swan)
+ o <- order(-matrixStats:::rowVars(b))[1:1000]
+    d <- dist(t(b[o, ]))
+    fit <- cmdscale(d)
+mds <- data.frame(PC1 = fit[,1], PC2 = fit[,2], Sex = pd$sex, Name=pd$Sample_Name,Age = pd$age,Chip = as.factor(pd$Slide))
+ggplot(mds, aes(x = PC1, y = PC2, col=Sex, cex=Age,pch=Chip,label=Name)) + geom_point() + geom_text(vjust=-1,hjust=1,cex=4)
+@
 
 \end{frame}
 
 \begin{frame}{Correction - ComBAT}
-
+\begin{itemize}
+\item{The current favourite method seems to be \textit{ComBAT}; implemented in the {\tt sva} package.}
+\item{Can also be run as part of the {\tt ChAMP} pipeline}
+\end{itemize}
 \end{frame}
 
 \begin{frame}{Design Implications}
@@ -381,7 +402,24 @@ M = log_2\frac{\beta}{1 - \beta}
 \section{Differential methylation}
 
 \subsection{DMPs}
-\begin{frame}{An old friend}
+\begin{frame}[fragile]
+
+<<>>=
+MSet.norm <- preprocessIllumina(RGset, bg.correct = TRUE,normalize = "controls", reference = 2)
+mset <- MSet.norm[1:20000,]
+M <- getM(mset, type = "beta", betaThreshold = 0.001)
+
+dmp <- dmpFinder(M, pheno=pd$Sample_Group,type="categorical",shrinkVar=T)
+head(dmp)
+@
+
+<<>>=
+cpgs <- rownames(dmp)[1:10]
+df <- melt(b[cpgs,])
+df <- merge(df, pd, by.x=2, by.y=0,all=T)
+ggplot(df, aes(x = Sample_Group, y=value,fill=Sample_Group)) + geom_boxplot() + facet_wrap(~X1,scales="free")
+@
+
 
 \end{frame}
 
