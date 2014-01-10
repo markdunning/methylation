@@ -182,9 +182,9 @@ controlStripPlot(RGset, controls="BISULFITE CONVERSION II",sampNames = pd$Sample
 
 \begin{frame}
 \begin{itemize}
-\item{Probes that are not \textit{detected} can be discarded.}
+\item{Probes that are not consistently \textit{detected} can be discarded.}
 \begin{itemize}
-\item e.g. $ >25\%$ with dectection p-value < 0.05
+\item e.g. $ >25\%$ with detection p-value $< 0.05$
 \end{itemize}
 \item{Annotation considerations}
 \begin{itemize}
@@ -192,6 +192,23 @@ controlStripPlot(RGset, controls="BISULFITE CONVERSION II",sampNames = pd$Sample
 \item{Autosomal effects}
 \end{itemize}
 \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Detection filtering}
+
+<<>>=
+detP <- detectionP(RGset)
+failed <- detP>0.05
+@
+Fraction of failed positions per sample
+<<>>=
+colMeans(failed)
+colMeans(failed) > 0.01
+@
+How many positions failed in 50\% of samples?
+<<>>=-
+sum(rowMeans(failed)>0.5)
+@
 \end{frame}
 
 \section{Preprocessing}
@@ -215,12 +232,7 @@ args(preprocessIllumina)
 \end{frame}
 
 
-\begin{frame}[fragile]{Filter samples}
 
-<<>>=
-preprocessQuantile(RGset)
-@
-\end{frame}
 
 \section{Normalisation}
 
@@ -286,11 +298,13 @@ Hence, they apply quantile normalisation to each subset.
 \begin{itemize}
 \item{BMIQ}
 \begin{itemize}
+\item{Beta Mixture Quantile Dilation}
+\item{Does not use assumptions about biological characteristics to select subsets of the data}
 \item{Implemented in wateRmelon}
 \end{itemize}
 \item{Peak-based correction}
 \begin{itemize}
-\item{Rescale TypeII probes based on TypeI assuming a bimodel shape}
+\item{Rescale TypeII probes based on TypeI assuming a bimodal shape}
 \item{Implemented in IMA package}
 \item{Does not work well when distribution does not exhibit well-defined peaks}
 \end{itemize}
@@ -365,7 +379,7 @@ M = log_2\frac{\beta}{1 - \beta}
 \begin{frame}[fragile]{Visualisation}
 Multi-dimensional scaling (\textit{MDS}) plots are useful for assesing sample relations in a similar way to PCA.
 
-<<fig.height=4>>=
+<<fig.height=4,echo=F>>=
 mdsPlot(Mset.swan, numPositions = 1000, sampGroups = pd$Sample_Group,
         sampNames = pd$Sample_Name)
 @
@@ -387,56 +401,66 @@ ggplot(mds, aes(x = PC1, y = PC2, col=Sex, cex=Age,pch=Chip,label=Name)) + geom_
 \begin{frame}{Correction - ComBAT}
 \begin{itemize}
 \item{The current favourite method seems to be \textit{ComBAT}; implemented in the {\tt sva} package.}
-\item{Can also be run as part of the {\tt ChAMP} pipeline}
+\item{\textbf{Ensure that sample groups are balanced among batches}}
 \end{itemize}
 \end{frame}
-
-\begin{frame}{Design Implications}
-\begin{itemize}
-\item{Ensure that sample groups are balanced among batches}
-\end{itemize}
-\end{frame}
-
 
 
 \section{Differential methylation}
 
 \subsection{DMPs}
 \begin{frame}[fragile]
-
-<<>>=
+The {\tt dmpFinder} method in {\tt minfi} uses an \textit{F-test} to find differentially methylated postions between groups. 
+\begin{itemize}
+\item{Log-ratios are used in the analysis}
+\item{The model is fitted using limma}
+\item{Variance-shrinkage recommended for small sample-size}
+\end{itemize}
+<<echo=FALSE,warning=FALSE>>=
+options(width=50)
 MSet.norm <- preprocessIllumina(RGset, bg.correct = TRUE,normalize = "controls", reference = 2)
 mset <- MSet.norm[1:20000,]
 M <- getM(mset, type = "beta", betaThreshold = 0.001)
+@
 
-dmp <- dmpFinder(M, pheno=pd$Sample_Group,type="categorical",shrinkVar=T)
+<<warning=FALSE>>=
+dmp <- dmpFinder(M, pheno=pd$Sample_Group,
+type="categorical",shrinkVar=T)
 head(dmp)
 @
+\end{frame}
 
-<<>>=
-cpgs <- rownames(dmp)[1:10]
+\begin{frame}[fragile]
+<<echo=F>>=
+cpgs <- rownames(dmp)[1:4]
 df <- melt(b[cpgs,])
 df <- merge(df, pd, by.x=2, by.y=0,all=T)
-ggplot(df, aes(x = Sample_Group, y=value,fill=Sample_Group)) + geom_boxplot() + facet_wrap(~X1,scales="free")
+ggplot(df, aes(x = Sample_Group, y=value,fill=Sample_Group)) + geom_boxplot() + facet_wrap(~X1,scales="free")+ theme(axis.text.x=element_text(angle = -90, hjust = 0))
 @
 
 
 \end{frame}
 
-\subsection{DMRs}
-
-\begin{frame}{Region-based approaches}
-
-\end{frame}
-
-\section{Other applications}
-
-\begin{frame}{Copy-Number analysis from 450k data}
-
-\end{frame}
 
 \begin{frame}{Available software}
+Processing and analysis of DNA methylation data. Wilhelm-Benartzi et al. (2013)
+\includegraphics[width=12cm]{software.png}
 
+
+\end{frame}
+
+\begin{frame}{ChAMP}
+\begin{columns}
+\column{.5\textwidth}
+\begin{itemize}
+\item{Automated workflow}
+\item{Data read using minfi from idat files}
+\item{Choice of normalization}
+\item{Visualisation and correction of batch effetcs}
+\end{itemize}
+\column{.5\textwidth}
+\includegraphics[width=5cm]{champ.png}
+\end{columns}
 \end{frame}
 
 \begin{frame}[fragile]{This talk was brought to you by...}
