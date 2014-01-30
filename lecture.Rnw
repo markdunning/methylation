@@ -20,11 +20,15 @@
 }
 
 % very important to use option [fragile] for frames containing code output!
+\date[Short Occasion] % (optional)
+{31st January 2014}
 
+{
+\usebackgroundtemplate{\includegraphics[width=\paperwidth]{images/criBackdrop.jpg}}
 \begin{frame}
   \titlepage
 \end{frame}
-
+}
 \begin{frame}{Outline}
   \tableofcontents
   % You might wish to add the option [pausesections]
@@ -36,26 +40,23 @@
 
 \begin{frame}{DNA Methylation}
 \begin{itemize}
-\item An epigenetic modification of DNA structure, but not sequence
+\item A chemical modification of DNA structure that plays key role in regulating gene expression. Addition of \textit{methyl} group.
 \item Occurs at \textit{CpG} locations in the genome; C followed by G
 \item Areas with dense concentration of CpGs known as \textit{CpG islands}
-\item Increased methylation known as \textit{hypermethylation}. Decreased methylayion known as \textit{hypomethylation}
-\item Global hypermethylation widely reported in cancer
+\item Increased methylation known as \textit{hypermethylation}. Decreased methylation known as \textit{hypomethylation}
+\item Aberrant gains and losses of methylation reported in the progression of cancer.
 \end{itemize}
 \end{frame}
 
 
 \begin{frame}{Measuring DNA Methylation on microarrays}
-\begin{columns}
-\column{.5\textwidth}
+
 \begin{itemize}
-\item{Bisulphite-treat the sample}
+\item{Bisulphite-treat the sample to introduce mutations at unmethylated Cs}
 \item{Umethylated Cs converted to U}
-\item{Perform genotyping assay}
+\item{Perform genotyping assay on \color{red}{two} \color{green}{colour} microarray.}
+\item{Compare methylated and unmethylated signal obtained.}
 \end{itemize}
-\column{.5\textwidth}
-\includegraphics[height=6cm]{assay.png}
-\end{columns}
 \end{frame}
 
 
@@ -89,6 +90,7 @@ Illumina only offer human methylation arrays
 \item{450,000 locations per sample, 12 samples per chip}
 \item{GPL13534 8793 Samples 160 Datasets}
 \end{itemize}
+TCGA also has over 6,000 samples {\tt http://cancergenome.nih.gov}
 \end{itemize}
 
 \end{frame}
@@ -99,7 +101,7 @@ Illumina only offer human methylation arrays
 \begin{frame}
 We will concentrate on the analysis of 450k data
 \begin{itemize}
-\item{It is the technology currently-available}
+\item{It is the currently available technology}
 \item{It is an area of active research}
 \item{Annual workshop}
 \begin{itemize}
@@ -114,13 +116,38 @@ We will concentrate on the analysis of 450k data
 Unless specified otherwise, code will be from the {\tt minfi} package
 \end{frame}
 
+\subsection{450k design}
+\begin{frame}{Different types of probe}
+\includegraphics[height=6cm]{images/probetypes.png}\\
+Dedeurwaerder et al. Evaluation of the Infinium Methylation 450K technology. Future Medicine
+\end{frame}
+
+\begin{frame}
+\begin{itemize}
+\item Assigning methylation values to each loci is not a trivial task
+\item For Type I design a pair of probes measure methylated and unmethylated in the \textit{either} the red or green channel
+\item For Type II, a single probe measures \color{red}{methylated} in the \color{red}{red} channel and \color{green}{unmethylated} in the \color{green}{green}.
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\begin{itemize}
+\item Type II probes can only tolerate three CpGs within the probe
+\item Type I probes tolerate more, but assumes that all methylation loci have the same state. i.e. For a 'methylated' probe all CpGs in the probe assumed to be methylated.
+\item Type I probes used in regions of high CpG density. e.g .CpG islands.
+\item Earlier 27k technology used exclusively Type I probes.
+\includegraphics[height=3cm]{images/locations.png}
+Aryee et al (2014) Minfi: A flexible and comprehensive Bioconductor package for the analysis of Infinium DNA Methylation microarrays
+\end{itemize}
+\end{frame}
+
 \section{Reading the data}
 \begin{frame}{idat format}
 450k arrays are commonly analysed from \textit{idat} files
 
 http://f1000research.com/articles/2-264/v1
 
-\includegraphics[height=6cm]{idat.png}
+\includegraphics[height=6cm]{images/idat.png}
 
 \end{frame}
 
@@ -158,7 +185,7 @@ head(grn)
 
 <<fig.height=4>>=
 pd <- pData(RGset)
-densityPlot(RGset, sampGroups = pd$Sample_Group,main = "Beta", xlab = "Beta")
+densityPlot(RGset, sampGroups = pd$Sample_Group,main = "Beta")
 
 @
 \end{frame}
@@ -166,7 +193,8 @@ densityPlot(RGset, sampGroups = pd$Sample_Group,main = "Beta", xlab = "Beta")
 \begin{frame}[fragile]{QC of samples}
 
 <<fig.height=4>>=
-densityBeanPlot(RGset, sampGroups = pd$Sample_Group,sampNames = pd$Sample_Name)
+densityBeanPlot(RGset, sampGroups = pd$Sample_Group,
+                sampNames = pd$Sample_Name)
 
 @
 \end{frame}
@@ -174,8 +202,15 @@ densityBeanPlot(RGset, sampGroups = pd$Sample_Group,sampNames = pd$Sample_Name)
 \begin{frame}[fragile]{QC of samples}
 
 <<fig.height=4>>=
-controlStripPlot(RGset, controls="BISULFITE CONVERSION II",sampNames = pd$Sample_Name)
+controlStripPlot(RGset, controls="BISULFITE CONVERSION II"
+                 ,sampNames = pd$Sample_Name)
 @
+\end{frame}
+
+\begin{frame}{minfi QA}
+Aryee et al (2014) Minfi: A flexible and comprehensive Bioconductor package for the analysis of Infinium DNA Methylation microarrays
+\includegraphics[height=5cm]{images/QA.png}
+Sample identity can also be confirmed using 65 SNP probes and gender inferred from the data
 \end{frame}
 
 \subsection{Probe QC}
@@ -190,6 +225,7 @@ controlStripPlot(RGset, controls="BISULFITE CONVERSION II",sampNames = pd$Sample
 \begin{itemize}
 \item{Cross-hybridisation}
 \item{Autosomal effects}
+\item{Probes that include SNPs may be influenced by sample genotype}
 \end{itemize}
 \end{itemize}
 \end{frame}
@@ -238,10 +274,7 @@ args(preprocessIllumina)
 
 \subsection{Type II bias}
 
-\begin{frame}{Different types of probe}
-\includegraphics[height=6cm]{probetypes.png}\\
-Dedeurwaerder et al. Evaluation of the Infinium Methylation 450K technology. Future Medicine
-\end{frame}
+
 
 \begin{frame}[fragile]
 Distribution of probe types
@@ -311,19 +344,21 @@ Hence, they apply quantile normalisation to each subset.
 \end{itemize}
 \end{frame}
 
-\begin{frame}[fragile]{The effect of SWAN}
 
-<<>>=
-Mset.swan <- preprocessSWAN(RGset)
-Methylated <- log2(getMeth(Mset.swan)[,1])
-Unmethylated <- log2(getUnmeth(Mset.swan)[,1])
-Beta <- getBeta(Mset.swan)[,1]
-ProbeType <- anno$Type
-df <- suppressMessages(melt(data.frame(Methylated, Unmethylated,Beta,ProbeType)))
 
-suppressWarnings(ggplot(df, aes(x=value, col=ProbeType)) + geom_density() + facet_wrap(~variable,scales="free"))
-@
-\end{frame}
+%\begin{frame}[fragile]{The effect of SWAN}
+
+%<<>>=
+%Mset.swan <- preprocessSWAN(RGset)
+%Methylated <- log2(getMeth(Mset.swan)[,1])
+%Unmethylated <- log2(getUnmeth(Mset.swan)[,1])
+%%Beta <- getBeta(Mset.swan)[,1]
+%ProbeType <- anno$Type
+%df <- suppressMessages(melt(data.frame(Methylated, Unmethylated,Beta,ProbeType)))
+
+%suppressWarnings(ggplot(df, aes(x=value, col=ProbeType)) + geom_density() + facet_wrap(~variable,scales="free"))
+%@
+%\end{frame}
 
 
 
@@ -378,6 +413,9 @@ M = log_2\frac{\beta}{1 - \beta}
 
 \begin{frame}[fragile]{Visualisation}
 Multi-dimensional scaling (\textit{MDS}) plots are useful for assesing sample relations in a similar way to PCA.
+<<echo=F>>=
+Mset.swan <- preprocessSWAN(RGset)
+@
 
 <<fig.height=4,echo=F>>=
 mdsPlot(Mset.swan, numPositions = 1000, sampGroups = pd$Sample_Group,
@@ -387,7 +425,7 @@ mdsPlot(Mset.swan, numPositions = 1000, sampGroups = pd$Sample_Group,
 \end{frame}
 
 \begin{frame}[fragile]{Check other covariates}
-<<echo=FALSE,fig.height=6>>=
+<<echo=FALSE,fig.height=5>>=
 b <- getBeta(Mset.swan)
  o <- order(-matrixStats:::rowVars(b))[1:1000]
     d <- dist(t(b[o, ]))
@@ -401,7 +439,10 @@ ggplot(mds, aes(x = PC1, y = PC2, col=Sex, cex=Age,pch=Chip,label=Name)) + geom_
 \begin{frame}{Correction - ComBAT}
 \begin{itemize}
 \item{The current favourite method seems to be \textit{ComBAT}; implemented in the {\tt sva} package.}
-\item{\textbf{Ensure that sample groups are balanced among batches}}
+\item{Uses an \textit{empirical bayes} framework}
+\item{Requires that you have an adjustment variable (e.g. processing data) that you want to correct}
+\item{Also specify the variable of interest in the experiment (e.g. tumour vs normal)}
+\item{\textbf{No substitute for poorly-designed experiments!}}
 \end{itemize}
 \end{frame}
 
@@ -442,9 +483,16 @@ ggplot(df, aes(x = Sample_Group, y=value,fill=Sample_Group)) + geom_boxplot() + 
 \end{frame}
 
 
+\begin{frame}{'bump-hunting'}
+Larger Differentially Methylated Regions can be identified
+\includegraphics[height=6cm]{images/bumphunting.png}
+Now also available in minfi
+\end{frame}
+
+
 \begin{frame}{Available software}
 Processing and analysis of DNA methylation data. Wilhelm-Benartzi et al. (2013)
-\includegraphics[width=12cm]{software.png}
+\includegraphics[width=12cm]{images/software.png}
 
 
 \end{frame}
@@ -456,19 +504,20 @@ Processing and analysis of DNA methylation data. Wilhelm-Benartzi et al. (2013)
 \item{Automated workflow}
 \item{Data read using minfi from idat files}
 \item{Choice of normalization}
-\item{Visualisation and correction of batch effetcs}
+\item{Visualisation and correction of batch effects}
+\item{CNA analysis}
 \end{itemize}
 \column{.5\textwidth}
-\includegraphics[width=5cm]{champ.png}
+\includegraphics[width=5cm]{images/champ.png}
 \end{columns}
 \end{frame}
 
-\begin{frame}[fragile]{This talk was brought to you by...}
+%\begin{frame}[fragile]{This talk was brought to you by...}
 
-<<sessionInfo>>=
+%<<sessionInfo>>=
 
-sessionInfo()
-@
+%sessionInfo()
+%@
 
-\end{frame}
+%%\end{frame}
 \end{document}
